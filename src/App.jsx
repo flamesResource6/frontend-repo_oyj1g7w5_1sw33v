@@ -75,7 +75,7 @@ function AdminPanel({ onCreated, onUpdated }) {
   const [form, setForm] = useState({ title: '', description: '', price: '', category: '', stock: 0, image_url: '' })
   const [update, setUpdate] = useState({ id: '', stock: '', in_stock: true })
 
-  const createProduct = async ()n  => {
+  const createProduct = async () => {
     setCreating(true)
     try {
       const res = await fetch(`${API_BASE}/admin/products`, {
@@ -163,6 +163,8 @@ function AdminPanel({ onCreated, onUpdated }) {
 export default function App() {
   const [products, setProducts] = useState([])
   const [q, setQ] = useState('')
+  const [category, setCategory] = useState('')
+  const [categories, setCategories] = useState([])
   const [cart, setCart] = useState([]) // {id,title,price,quantity}
   const [loadingCheckout, setLoadingCheckout] = useState(false)
   const [tab, setTab] = useState('shop')
@@ -170,12 +172,24 @@ export default function App() {
   const load = async () => {
     const url = new URL(`${API_BASE}/products`)
     if (q) url.searchParams.set('q', q)
+    if (category) url.searchParams.set('category', category)
     const res = await fetch(url)
     const data = await res.json()
     setProducts(Array.isArray(data) ? data : [])
   }
 
-  useEffect(() => { load() }, [])
+  const loadCategories = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/categories`)
+      if (!res.ok) throw new Error('failed')
+      const data = await res.json()
+      setCategories(Array.isArray(data) ? data : [])
+    } catch (e) {
+      setCategories([])
+    }
+  }
+
+  useEffect(() => { load(); loadCategories() }, [])
 
   const addToCart = (p) => {
     setCart(prev => {
@@ -234,7 +248,13 @@ export default function App() {
             <div className="lg:col-span-3">
               <div className="flex items-center gap-3 mb-4">
                 <input value={q} onChange={(e)=>setQ(e.target.value)} onKeyDown={(e)=> e.key==='Enter' && load()} placeholder="Search products..." className="flex-1 border rounded-lg px-3 py-2" />
-                <button onClick={load} className="px-4 py-2 rounded-lg bg-gray-900 text-white">Search</button>
+                <select value={category} onChange={(e)=> setCategory(e.target.value)} className="border rounded-lg px-3 py-2">
+                  <option value="">All Categories</option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <button onClick={load} className="px-4 py-2 rounded-lg bg-gray-900 text-white">Apply</button>
               </div>
               {products.length === 0 ? (
                 <div className="text-center text-gray-500 py-16 bg-white rounded-xl border">No products yet. Add some in Admin.</div>
@@ -251,7 +271,7 @@ export default function App() {
         )}
 
         {tab === 'admin' && (
-          <AdminPanel onCreated={load} onUpdated={load} />
+          <AdminPanel onCreated={() => { load(); loadCategories() }} onUpdated={load} />
         )}
       </main>
 
